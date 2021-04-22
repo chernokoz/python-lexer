@@ -158,6 +158,62 @@ namespace python_lexer
         }
         
         [Test]
+        public void TestQuotedStringSimple()
+        {
+            var lexer = new Lexer();
+            var res = lexer.Run("     'abcd'  ");
+            Assert.AreEqual(1, res.Count);
+        }
+        
+        [Test]
+        public void TestControlStringSimple()
+        {
+            var lexer = new Lexer();
+            var res = lexer.Run("     #12  ");
+            Assert.AreEqual(1, res.Count);
+        }
+        
+        [Test]
+        public void TestQuotedControlQuotedString()
+        {
+            var lexer = new Lexer();
+            var res = lexer.Run("     'abc'#12'def'  ");
+            Assert.AreEqual(1, res.Count);
+        }
+        
+        [Test]
+        public void TestQuotedNumberQuotedNumberQuoted()
+        {
+            var lexer = new Lexer();
+            var res = lexer.Run("    '123'321'123'321'123'  ");
+            Assert.AreEqual(5, res.Count);
+        }
+        
+        [Test]
+        public void TestEscapedQuoteSimple()
+        {
+            var lexer = new Lexer();
+            var res = lexer.Run("    ''''  ");
+            Assert.AreEqual(1, res.Count);
+        }
+        
+        [Test]
+        public void TestEscapedQuoteThreeTimes()
+        {
+            var lexer = new Lexer();
+            var res = lexer.Run("    '123''456''789'  ");
+            Assert.AreEqual(1, res.Count);
+        }
+        
+        [Test]
+        public void TestEscapedQuoteAndControls()
+        {
+            var lexer = new Lexer();
+            var res = lexer.Run("    'asd!&!@#'#11'end'  ");
+            Assert.AreEqual(1, res.Count);
+        }
+        
+        [Test]
         public void TestCombo()
         {
             var lexer = new Lexer();
@@ -167,6 +223,17 @@ namespace python_lexer
             Assert.True(res[1] is NumberToken);
             Assert.True(res[2] is IdentifierToken);
             Assert.True(res[3] is SpecialSymbolToken);
+        }
+        
+        [Test]
+        public void TestCombo2()
+        {
+            var lexer = new Lexer();
+            var res = lexer.Run(" 777'seven'#7'seven'777 ");
+            Assert.AreEqual(3, res.Count);
+            Assert.True(res[0] is NumberToken);
+            Assert.True(res[1] is StringToken);
+            Assert.True(res[2] is NumberToken);
         }
     }
 }

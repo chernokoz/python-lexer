@@ -27,6 +27,10 @@ namespace python_lexer
             {
                 return ResolveNumber(context);
             }
+            else if (StringToken.IsStringBegin(context))
+            {
+                return ResolveString(context);
+            }
             else if (SpecialSymbolToken.IsSpecial(context))
             {
                 return ResolveSpecial(context);
@@ -40,7 +44,7 @@ namespace python_lexer
                 throw new SyntaxErrorException();
             }
         }
-        
+
         private static void ResolveWhitespace(LexerContext context)
         {
             while (!context.IsEnded() && (context.GetCurrentChar().Equals(' ') || ResolveNewLine(context)))
@@ -137,6 +141,64 @@ namespace python_lexer
             }
 
             return new NumberToken(builder.ToString());
+        }
+        
+        private static StringToken ResolveString(LexerContext context)
+        {
+            var builder = new StringBuilder();
+            while (StringToken.IsStringBegin(context))
+            {
+                if (context.GetCurrentChar().Equals('\''))
+                {
+                    ResolveQuotedString(context, builder);
+                } 
+                else
+                {
+                    ResolveControlString(context, builder);
+                }   
+            }
+
+            return new StringToken(builder.ToString());
+        }
+        
+        private static void ResolveQuotedString(LexerContext context, StringBuilder builder)
+        {
+            context.IncIndex();
+
+            while (!context.IsEnded() && StringToken.IsStringSymbol(context.GetCurrentChar()))
+            {
+                if (context.GetCurrentChar().Equals('\''))
+                {
+                    if (StringToken.IsDoubleQuote(context))
+                    {
+                        builder.Append('\'');
+                        context.IncIndex();
+                        context.IncIndex();
+                    }
+                    else
+                    {
+                        context.IncIndex();
+                        return;
+                    }
+                }
+                builder.Append(context.GetCurrentChar());
+                context.IncIndex();
+            }
+        }
+        
+        private static void ResolveControlString(LexerContext context, StringBuilder builder)
+        {
+            context.IncIndex();
+
+            var numberBuilder = new StringBuilder();
+            while (!context.IsEnded() && Char.IsDigit(context.GetCurrentChar()))
+            {
+                numberBuilder.Append(context.GetCurrentChar());
+                context.IncIndex();
+            }
+
+            var num = Int32.Parse(numberBuilder.ToString());
+            builder.Append((char) num);
         }
     }
 }

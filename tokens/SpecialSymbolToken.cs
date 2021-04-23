@@ -12,14 +12,18 @@ namespace python_lexer.tokens
 
         private string _specials;
 
-        public SpecialSymbolToken(string specials)
+        public SpecialSymbolToken(string specials, int begin)
         {
-            this._specials = specials;
+            _specials = specials;
+            beginIndex = begin;
+            endIndex = begin + 1;
         }
         
-        public SpecialSymbolToken(char special)
+        public SpecialSymbolToken(char special, int begin)
         {
             this._specials = special.ToString();
+            beginIndex = begin;
+            endIndex = begin + 2;
         }
 
         public static bool IsSpecial(LexerContext context)

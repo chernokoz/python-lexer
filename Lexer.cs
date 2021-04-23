@@ -75,24 +75,26 @@ namespace python_lexer
 
         private static SpecialSymbolToken ResolveSpecial(LexerContext context)
         {
+            var begin = context.GetIndex();
             if (!context.IsLast() && SpecialSymbolToken.IsSpecialPair(context))
             {
                 var pair = context.GetCharPair();
                 context.IncIndex();
                 context.IncIndex();
-                return new SpecialSymbolToken(pair);
+                return new SpecialSymbolToken(pair, begin);
             } 
             else
             {
                 var ch = context.GetCurrentChar();
                 context.IncIndex();
-                return new SpecialSymbolToken(ch);
+                return new SpecialSymbolToken(ch, begin);
             }
         }
         
         private static IdentifierToken ResolveIdentifier(LexerContext context)
         {
             var builder = new StringBuilder();
+            var begin = context.GetIndex();
             builder.Append(context.GetCurrentChar());
             context.IncIndex();
             while (!context.IsEnded()
@@ -103,11 +105,12 @@ namespace python_lexer
                 context.IncIndex();
             }
 
-            return new IdentifierToken(builder.ToString());
+            return new IdentifierToken(builder.ToString(), begin, context.GetIndex());
         }
         
         private static NumberToken ResolveNumber(LexerContext context)
         {
+            var begin = context.GetIndex();
             var builder = new StringBuilder();
             if (NumberToken.IsDecimalNumberBegin(context))
             {
@@ -145,11 +148,12 @@ namespace python_lexer
                 }
             }
 
-            return new NumberToken(builder.ToString());
+            return new NumberToken(builder.ToString(), begin, context.GetIndex());
         }
         
         private static StringToken ResolveString(LexerContext context)
         {
+            var begin = context.GetIndex();
             var builder = new StringBuilder();
             while (StringToken.IsStringBegin(context))
             {
@@ -163,7 +167,7 @@ namespace python_lexer
                 }   
             }
 
-            return new StringToken(builder.ToString());
+            return new StringToken(builder.ToString(), begin, context.GetIndex());
         }
         
         private static void ResolveQuotedString(LexerContext context, StringBuilder builder)
@@ -224,12 +228,23 @@ namespace python_lexer
         
         private static CommentToken ResolveOldStyleComment(LexerContext context)
         {
+            var begin = context.GetIndex();
             context.IncIndex();
             context.IncIndex();
             var inners = new List<CommentToken>();
             var isOneLine = true;
             while (!context.IsEnded())
             {
+                if (CommentToken.IsTurboPascalCommentBegin(context))
+                {
+                    inners.Add(ResolveTurboPascalComment(context));
+                    continue;
+                }
+                if (CommentToken.IsDelphiCommentBegin(context))
+                {
+                    inners.Add(ResolveDelphiComment(context));
+                    continue;
+                }
                 if (context.IsNewLineNow())
                 {
                     isOneLine = false;
@@ -245,16 +260,34 @@ namespace python_lexer
                 context.IncIndex();
             }
 
-            return new CommentToken(isOneLine && inners.All(c => c.IsSingleLineComment), inners);    
+            return new CommentToken(isOneLine && inners.All(c => c.IsSingleLineComment), inners,
+                                    begin, context.GetIndex());
         }
         
         private static CommentToken ResolveTurboPascalComment(LexerContext context)
         {
+            var begin = context.GetIndex();
             context.IncIndex();
             var inners = new List<CommentToken>();
             var isOneLine = true;
             while (!context.IsEnded())
             {
+                if (CommentToken.IsOldStyleCommentBegin(context))
+                {
+                    inners.Add(ResolveOldStyleComment(context));
+                    continue;
+                }
+                if (CommentToken.IsDelphiCommentBegin(context))
+                {
+                    inners.Add(ResolveDelphiComment(context));
+                    continue;
+                }
+                if (context.IsNewLineNow())
+                {
+                    isOneLine = false;
+                    for (var i = 0; i < Environment.NewLine.Length; i++) context.IncIndex();
+                }
+                
                 if (context.IsNewLineNow())
                 {
                     isOneLine = false;
@@ -269,18 +302,35 @@ namespace python_lexer
                 context.IncIndex();
             }
 
-            return new CommentToken(isOneLine && inners.All(c => c.IsSingleLineComment), inners);   
+            return new CommentToken(isOneLine && inners.All(c => c.IsSingleLineComment), inners,
+                                    begin, context.GetIndex());   
         }
         
         private static CommentToken ResolveDelphiComment(LexerContext context)
         {
+            var begin = context.GetIndex();
+            context.IncIndex();
+            context.IncIndex();
             var inners = new List<CommentToken>();
             while (!context.IsEnded() && !context.IsNewLineNow())
             {
+                if (CommentToken.IsOldStyleCommentBegin(context))
+                {
+                    inners.Add(ResolveOldStyleComment(context));
+                    continue;
+                }
+                if (CommentToken.IsTurboPascalCommentBegin(context))
+                {
+                    inners.Add(ResolveTurboPascalComment(context));
+                    continue;
+                }
                 context.IncIndex();
             }
 
-            return new CommentToken(inners.All(c => c.IsSingleLineComment), inners);
+            var isSingleLine = inners.All(c => c.IsSingleLineComment);
+            if (!isSingleLine) throw new SyntaxErrorException();
+            
+            return new CommentToken(true, inners, begin, context.GetIndex());
         }
         
     }

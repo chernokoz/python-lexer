@@ -6,10 +6,10 @@ namespace python_lexer.tokens
     {
         private string _value;
 
-        public IdentifierToken(string value)
+        public IdentifierToken(string value, int begin, int end)
         {
-            beginIndex = endIndex;
-            endIndex = beginIndex;
+            beginIndex = begin;
+            endIndex = end;
             _value = value;
         }
 

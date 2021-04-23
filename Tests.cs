@@ -1,11 +1,12 @@
 ﻿using System;
+using System.Data;
 using System.Linq;
 using NUnit.Framework;
 using python_lexer.tokens;
 
 namespace python_lexer
 {
-    public class TestWithoutBrackets
+    public class LexerTests
     {
         [Test]
         public void TestSpecialsSimple()
@@ -20,7 +21,7 @@ namespace python_lexer
         public void TestSpecialsPairs()
         {
             var lexer = new Lexer();
-            var res = lexer.Run("// + >> <<//");
+            var res = lexer.Run("** + >> <<//");
             Assert.AreEqual(5, res.Count);
             Assert.Pass();
         }
@@ -284,6 +285,91 @@ namespace python_lexer
         }
         
         [Test]
+        public void TestNestingCommentsCase1()
+        {
+            var lexer = new Lexer();
+            var res = lexer.Run("{ Comment 1 (* comment 2 *) }");
+            Assert.AreEqual(1, res.Count);
+            Assert.True(res[0] is CommentToken);
+            var comment = res[0] as CommentToken;
+            Assert.AreEqual(1, comment.InnerComments.Count);
+        }
+        
+        [Test]
+        public void TestNestingCommentsCase2()
+        {
+            var lexer = new Lexer();
+            var res = lexer.Run("(* Comment 1 { comment 2 } *)");
+            Assert.AreEqual(1, res.Count);
+            Assert.True(res[0] is CommentToken);
+            var comment = res[0] as CommentToken;
+            Assert.AreEqual(1, comment.InnerComments.Count);
+        }
+        
+        [Test]
+        public void TestNestingCommentsCase3()
+        {
+            var lexer = new Lexer();
+            var res = lexer.Run("{ comment 1 // Comment 2 } ");
+            Assert.AreEqual(1, res.Count);
+            Assert.True(res[0] is CommentToken);
+            var comment = res[0] as CommentToken;
+            Assert.AreEqual(1, comment.InnerComments.Count);
+        }
+        
+        [Test]
+        public void TestNestingCommentsCase4()
+        {
+            var lexer = new Lexer();
+            var res = lexer.Run("(* comment 1 // Comment 2 *) ");
+            Assert.AreEqual(1, res.Count);
+            Assert.True(res[0] is CommentToken);
+            var comment = res[0] as CommentToken;
+            Assert.AreEqual(1, comment.InnerComments.Count);
+        }
+        
+        [Test]
+        public void TestNestingCommentsCase5()
+        {
+            var lexer = new Lexer();
+            var res = lexer.Run("// comment 1 (* comment 2 *) ");
+            Assert.AreEqual(1, res.Count);
+            Assert.True(res[0] is CommentToken);
+            var comment = res[0] as CommentToken;
+            Assert.AreEqual(1, comment.InnerComments.Count);
+        }
+        
+        [Test]
+        public void TestNestingCommentsCase6()
+        {
+            var lexer = new Lexer();
+            var res = lexer.Run("// comment 1 { comment 2 } ");
+            Assert.AreEqual(1, res.Count);
+            Assert.True(res[0] is CommentToken);
+            var comment = res[0] as CommentToken;
+            Assert.AreEqual(1, comment.InnerComments.Count);
+        }
+        
+        
+        [Test]
+        public void TestBadNestingCase1()
+        {
+            var lexer = new Lexer();
+            var testString = String.Format(" // Valid comment {{ No longer valid comment !! {0} --- }} ",
+                Environment.NewLine);
+            Assert.Throws<SyntaxErrorException>(() => lexer.Run(testString));
+        }
+        
+        [Test]
+        public void TestBadNestingCase2()
+        {
+            var lexer = new Lexer();
+            var testString = String.Format(" // Valid comment (* No longer valid comment !! {0} --- *) ",
+                Environment.NewLine);
+            Assert.Throws<SyntaxErrorException>(() => lexer.Run(testString));
+        }
+
+        [Test]
         public void TestCombo()
         {
             var lexer = new Lexer();
@@ -304,6 +390,23 @@ namespace python_lexer
             Assert.True(res[0] is NumberToken);
             Assert.True(res[1] is StringToken);
             Assert.True(res[2] is NumberToken);
+        }
+        
+        [Test]
+        public void TestCombo3()
+        {
+            var lexer = new Lexer();
+            var testString = String.Format("888 {0} " +
+                                           "777 // 123 ababn #123 {0}" +
+                                           "'123'#12'123' {{123 123 {0}" +
+                                           " 123}}", Environment.NewLine);
+            var res = lexer.Run(testString);
+            Assert.AreEqual(5, res.Count);
+            Assert.True(res[0] is NumberToken);
+            Assert.True(res[1] is NumberToken);
+            Assert.True(res[2] is CommentToken);
+            Assert.True(res[3] is StringToken);
+            Assert.True(res[4] is CommentToken);
         }
     }
 }

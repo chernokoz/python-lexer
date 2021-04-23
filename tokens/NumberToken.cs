@@ -13,9 +13,11 @@ namespace python_lexer.tokens
             '5', '6', '7'};
         private static readonly HashSet<char> BinaryDigits = new HashSet<char> {'0', '1'};
 
-        public NumberToken(string value)
+        public NumberToken(string value, int begin, int end)
         {
             _value = value;
+            beginIndex = begin;
+            endIndex = end;
         }
         
         public static bool IsDecimalNumberBegin(LexerContext context)

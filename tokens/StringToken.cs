@@ -6,9 +6,11 @@ namespace python_lexer.tokens
     {
         private string _value;
 
-        public StringToken(string value)
+        public StringToken(string value, int begin, int end)
         {
             _value = value;
+            beginIndex = begin;
+            endIndex = end;
         }
 
         public static bool IsStringBegin(LexerContext context)

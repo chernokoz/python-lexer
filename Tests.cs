@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using NUnit.Framework;
 using python_lexer.tokens;
 
@@ -211,6 +212,75 @@ namespace python_lexer
             var lexer = new Lexer();
             var res = lexer.Run("    'asd!&!@#'#11'end'  ");
             Assert.AreEqual(1, res.Count);
+        }
+        
+        [Test]
+        public void TestOldStyleCommentSimple()
+        {
+            var lexer = new Lexer();
+            var res = lexer.Run(" 777 +  (* asdabsd dfsdf sdf + df *) ");
+            Assert.AreEqual(3, res.Count);
+            Assert.True(res[0] is NumberToken);
+            Assert.True(res[1] is SpecialSymbolToken);
+            Assert.True(res[2] is CommentToken);
+        }
+        
+        [Test]
+        public void TestOldStyleCommentMultipleLines()
+        {
+            var lexer = new Lexer();
+            var testString = String.Format(" 555 *  (* asdabsd  {0} dfsdf sdf + df *) ", Environment.NewLine);
+            var res = lexer.Run(testString);
+            Assert.AreEqual(3, res.Count);
+            Assert.True(res[0] is NumberToken);
+            Assert.True(res[1] is SpecialSymbolToken);
+            Assert.True(res[2] is CommentToken);
+        }
+        
+        [Test]
+        public void TestTurboPascalCommentSimple()
+        {
+            var lexer = new Lexer();
+            var res = lexer.Run(" 777 +  { asdabsd dfsdf sdf + df } ");
+            Assert.AreEqual(3, res.Count);
+            Assert.True(res[0] is NumberToken);
+            Assert.True(res[1] is SpecialSymbolToken);
+            Assert.True(res[2] is CommentToken);
+        }
+        
+        [Test]
+        public void TestTurboPascalCommentMultipleLines()
+        {
+            var lexer = new Lexer();
+            var testString = String.Format(" 555 *  {{ 'ololo'  {0} dfsdf 777 * abc }} ", Environment.NewLine);
+            var res = lexer.Run(testString);
+            Assert.AreEqual(3, res.Count);
+            Assert.True(res[0] is NumberToken);
+            Assert.True(res[1] is SpecialSymbolToken);
+            Assert.True(res[2] is CommentToken);
+        }
+        
+        [Test]
+        public void TestDelphiCommentSimple()
+        {
+            var lexer = new Lexer();
+            var res = lexer.Run(" 777  //77712300099 ");
+            Assert.AreEqual(2, res.Count);
+            Assert.True(res[0] is NumberToken);
+            Assert.True(res[1] is CommentToken);
+        }
+        
+        [Test]
+        public void TestDelphiCommentMultipleLines()
+        {
+            var lexer = new Lexer();
+            var testString = String.Format(" 555 *  // 'ololo'  {0} 531 ", Environment.NewLine);
+            var res = lexer.Run(testString);
+            Assert.AreEqual(4, res.Count);
+            Assert.True(res[0] is NumberToken);
+            Assert.True(res[1] is SpecialSymbolToken);
+            Assert.True(res[2] is CommentToken);
+            Assert.True(res[3] is NumberToken);
         }
         
         [Test]

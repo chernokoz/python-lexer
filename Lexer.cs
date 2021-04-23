@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Text;
 using python_lexer.tokens;
 
@@ -23,7 +24,11 @@ namespace python_lexer
 
         private static IToken Resolve(LexerContext context)
         {
-            if (NumberToken.IsNumberBegin(context))
+            if (CommentToken.IsCommentBegin(context))
+            {
+                return ResolveComment(context);
+            }
+            else if (NumberToken.IsNumberBegin(context))
             {
                 return ResolveNumber(context);
             }
@@ -200,5 +205,83 @@ namespace python_lexer
             var num = Int32.Parse(numberBuilder.ToString());
             builder.Append((char) num);
         }
+        
+        private static CommentToken ResolveComment(LexerContext context)
+        {
+            if (CommentToken.IsOldStyleCommentBegin(context))
+            {
+                return ResolveOldStyleComment(context);
+            }
+            else if (CommentToken.IsTurboPascalCommentBegin(context))
+            {
+                return ResolveTurboPascalComment(context);
+            }
+            else
+            {
+                return ResolveDelphiComment(context);
+            }
+        }
+        
+        private static CommentToken ResolveOldStyleComment(LexerContext context)
+        {
+            context.IncIndex();
+            context.IncIndex();
+            var inners = new List<CommentToken>();
+            var isOneLine = true;
+            while (!context.IsEnded())
+            {
+                if (context.IsNewLineNow())
+                {
+                    isOneLine = false;
+                    for (var i = 0; i < Environment.NewLine.Length; i++) context.IncIndex();
+                }
+
+                if (CommentToken.IsOldStyleCommentEnd(context))
+                {
+                    context.IncIndex();
+                    context.IncIndex();
+                    break;
+                }
+                context.IncIndex();
+            }
+
+            return new CommentToken(isOneLine && inners.All(c => c.IsSingleLineComment), inners);    
+        }
+        
+        private static CommentToken ResolveTurboPascalComment(LexerContext context)
+        {
+            context.IncIndex();
+            var inners = new List<CommentToken>();
+            var isOneLine = true;
+            while (!context.IsEnded())
+            {
+                if (context.IsNewLineNow())
+                {
+                    isOneLine = false;
+                    for (var i = 0; i < Environment.NewLine.Length; i++) context.IncIndex();
+                }
+
+                if (CommentToken.IsTurboPascalCommentEnd(context))
+                {
+                    context.IncIndex();
+                    break;
+                }
+                context.IncIndex();
+            }
+
+            return new CommentToken(isOneLine && inners.All(c => c.IsSingleLineComment), inners);   
+        }
+        
+        private static CommentToken ResolveDelphiComment(LexerContext context)
+        {
+            var inners = new List<CommentToken>();
+            while (!context.IsEnded() && !context.IsNewLineNow())
+            {
+                context.IncIndex();
+            }
+
+            return new CommentToken(inners.All(c => c.IsSingleLineComment), inners);
+        }
+        
     }
 }

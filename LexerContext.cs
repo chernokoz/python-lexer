@@ -1,4 +1,6 @@
-﻿namespace python_lexer
+﻿using System;
+
+namespace python_lexer
 {
     public class LexerContext
     {
@@ -50,6 +52,14 @@
             if (IsLast()) return null;
             var pair = new char[] {GetCurrentChar(), GetNextChar()};
             return new string(pair);
+        }
+        
+        public bool IsNewLineNow()
+        {
+            var sep = Environment.NewLine;
+            return !IsEnded()
+                   && currentIndex + sep.Length - 1 < str.Length
+                   && str.Substring(currentIndex, sep.Length).Equals(sep);
         }
     }
 }
